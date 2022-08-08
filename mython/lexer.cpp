@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <charconv>
 #include <unordered_map>
+#include <map>
 
 using namespace std;
 
@@ -101,46 +102,27 @@ namespace parse {
             }
             str.push_back(c);
         }
-        if (str == "class") {
-            token_ = token_type::Class{};
-        }
-        else if (str == "return") {
-            token_ = token_type::Return{};
-        }
-        else if (str == "if") {
-            token_ = token_type::If{};
-        }
-        else if (str == "else") {
-            token_ = token_type::Else{};
-        }
-        else if (str == "def") {
-            token_ = token_type::Def{};
-        }
-        else if (str == "print") {
-            token_ = token_type::Print{};
-        }
-        else if (str == "and") {
-            token_ = token_type::And{};
-        }
-        else if (str == "or") {
-            token_ = token_type::Or{};
-        }
-        else if (str == "not") {
-            token_ = token_type::Not{};
-        }
-        else if (str == "None") {
-            token_ = token_type::None{};
-        }
-        else if (str == "True") {
-            token_ = token_type::True{};
-        }
-        else if (str == "False") {
-            token_ = token_type::False{};
-        }
-        else if (!str.empty() && std::find_if(str.begin(),
+        std::map<std::string, Token> input_token;
+        input_token.insert({ "class" , token_type::Class{} }); 
+        input_token.insert({ "return" , token_type::Return{} }); 
+        input_token.insert({ "if", token_type::If{} });
+        input_token.insert({ "else", token_type::Else{} });
+        input_token.insert({ "def", token_type::Def{} });
+        input_token.insert({ "print", token_type::Print{} });
+        input_token.insert({ "and", token_type::And{} });
+        input_token.insert({ "or", token_type::Or{} });
+        input_token.insert({ "not", token_type::Not{} });
+        input_token.insert({ "None", token_type::None{} });
+        input_token.insert({ "True", token_type::True{} });
+        input_token.insert({ "False", token_type::False{} });
+
+         if (!str.empty() && std::find_if(str.begin(),
             str.end(), [](unsigned char c) { return !std::isdigit(c); }) == str.end()) {
             token_ = token_type::Number{ stoi(str) };
-        }
+         }
+         else if (input_token.count(str)!=0){
+             token_ = input_token.at(str);
+         }
         else {
 
             token_ = token_type::Id{ str };
@@ -377,3 +359,4 @@ namespace parse {
 
 
 }  // namespace parse
+
