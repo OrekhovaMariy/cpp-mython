@@ -3,10 +3,16 @@
 #include <cassert>
 #include <optional>
 #include <sstream>
+#include <functional>
 
 using namespace std;
 
 namespace runtime {
+    namespace {
+        const string STR_METHOD = "__str__"s;
+        const string LT_METHOD = "__lt__"s;
+        const string EQ_METHOD = "__eq__"s;
+    }  // namespace
 
     ObjectHolder::ObjectHolder(std::shared_ptr<Object> data)
         : data_(std::move(data)) {
@@ -71,8 +77,8 @@ namespace runtime {
     ClassInstance::ClassInstance(const Class& cls) : class_(cls) {}
 
     void ClassInstance::Print(std::ostream& os, Context& context) {
-        if (HasMethod("__str__", 0)) {
-            Call("__str__", {}, context)->Print(os, context);
+        if (HasMethod(STR_METHOD, 0)) {
+            Call(STR_METHOD, {}, context)->Print(os, context);
         }
         else {
             os << this;
@@ -136,41 +142,47 @@ namespace runtime {
         os << (GetValue() ? "True"sv : "False"sv);
     }
 
-    bool Equal(const ObjectHolder& lhs, const ObjectHolder& rhs, Context& context) {
-        if (lhs.TryAs<Bool>() && rhs.TryAs<Bool>()) {
-            return lhs.TryAs<Bool>()->GetValue() == rhs.TryAs<Bool>()->GetValue();
+    template<typename C>
+    bool Comp(const ObjectHolder& lhs, const ObjectHolder& rhs, C pred = C{}) {
+            if (lhs.TryAs<Bool>() && rhs.TryAs<Bool>()) {
+                return pred(lhs.TryAs<Bool>()->GetValue(), rhs.TryAs<Bool>()->GetValue());
+            }
+            if (lhs.TryAs<Number>() && rhs.TryAs<Number>()) {
+                return pred(lhs.TryAs<Number>()->GetValue(), rhs.TryAs<Number>()->GetValue());
+            }
+            if (lhs.TryAs<String>() && rhs.TryAs<String>()) {
+                return pred(lhs.TryAs<String>()->GetValue(), rhs.TryAs<String>()->GetValue());   
         }
-        if (lhs.TryAs<Number>() && rhs.TryAs<Number>()) {
-            return lhs.TryAs<Number>()->GetValue() == rhs.TryAs<Number>()->GetValue();
-        }
-        if (lhs.TryAs<String>() && rhs.TryAs<String>()) {
-            return lhs.TryAs<String>()->GetValue() == rhs.TryAs<String>()->GetValue();
-        }
+        throw std::runtime_error("Cannot compare objects"s);
+    }
 
-        if (lhs.TryAs<ClassInstance>() && lhs.TryAs<ClassInstance>()->HasMethod("__eq__"s, 1)) {
-            return lhs.TryAs<ClassInstance>()->Call("__eq__"s, { rhs }, context).TryAs<Bool>()->GetValue();
+
+    bool Equal(const ObjectHolder& lhs, const ObjectHolder& rhs, Context& context) {
+        try {
+            return Comp(lhs, rhs, std::equal_to<>{});
         }
-        if (!lhs.operator bool() && !rhs.operator bool()) {
-            return true;
+        catch (std::runtime_error&) {
+            if (lhs.TryAs<ClassInstance>() && lhs.TryAs<ClassInstance>()->HasMethod(EQ_METHOD, 1)) {
+                return lhs.TryAs<ClassInstance>()->Call(EQ_METHOD, { rhs }, context).TryAs<Bool>()->GetValue();
+            }
+            if (!lhs.operator bool() && !rhs.operator bool()) {
+                return true;
+            }
+            throw std::runtime_error("Cannot compare objects for equal"s);
         }
-        throw std::runtime_error("Cannot compare objects for equal"s);
     }
 
     bool Less(const ObjectHolder& lhs, const ObjectHolder& rhs, Context& context) {
-        if (lhs.TryAs<Bool>() && rhs.TryAs<Bool>()) {
-            return lhs.TryAs<Bool>()->GetValue() < rhs.TryAs<Bool>()->GetValue();
+        try {
+            return Comp(lhs, rhs, std::less<>{});
         }
-        if (lhs.TryAs<Number>() && rhs.TryAs<Number>()) {
-            return lhs.TryAs<Number>()->GetValue() < rhs.TryAs<Number>()->GetValue();
-        }
-        if (lhs.TryAs<String>() && rhs.TryAs<String>()) {
-            return lhs.TryAs<String>()->GetValue() < rhs.TryAs<String>()->GetValue();
-        }
+        catch (std::runtime_error&) {
 
-        if (lhs.TryAs<ClassInstance>() && lhs.TryAs<ClassInstance>()->HasMethod("__lt__"s, 1)) {
-            return lhs.TryAs<ClassInstance>()->Call("__lt__"s, { rhs }, context).TryAs<Bool>()->GetValue();
+            if (lhs.TryAs<ClassInstance>() && lhs.TryAs<ClassInstance>()->HasMethod(LT_METHOD, 1)) {
+                return lhs.TryAs<ClassInstance>()->Call(LT_METHOD, { rhs }, context).TryAs<Bool>()->GetValue();
+            }
+            throw std::runtime_error("Cannot compare objects for less"s);
         }
-        throw std::runtime_error("Cannot compare objects for less"s);
     }
 
     bool NotEqual(const ObjectHolder& lhs, const ObjectHolder& rhs, Context& context) {
