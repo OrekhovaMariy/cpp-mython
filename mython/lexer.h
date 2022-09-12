@@ -125,7 +125,6 @@ namespace parse {
         template <typename T>
         const T& ExpectNext() {
             using namespace std::literals;
-            // Заглушка. Реализуйте метод самостоятельно
             LoadLexer();
             using namespace std::literals;
             if (token_.Is<T>()) {
@@ -141,7 +140,6 @@ namespace parse {
         template <typename T, typename U>
         void ExpectNext(const U& value) {
             using namespace std::literals;
-            // Заглушка. Реализуйте метод самостоятельно
             LoadLexer();
             if (token_.Is<T>() && token_.As<T>().value == value) {
                 return;
@@ -154,7 +152,6 @@ namespace parse {
 
 
     private:
-        // Реализуйте приватную часть самостоятельно
         std::istream& input_;
         Token token_;
         size_t Indent = 0;
