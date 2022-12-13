@@ -2,7 +2,7 @@
 #include "parse.h"
 #include "statement.h"
 
-#include <test_runner.h>
+#include "test_runner.h"
 
 using namespace std;
 
